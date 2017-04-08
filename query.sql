@@ -1,37 +1,26 @@
 with
 
--- Return the number of stops for each route trip.
+-- Return distinct stop times. Most trips contain the same stops so this
+-- filters out a lot of noise. The stop sequence order is not guaranteed
+-- to be contiguous.
 -- Ex.
--- 45 | 0 | 1234 | 100
--- 45 | 0 | 1235 |  99
--- 45 | 1 | 1236 | 100
--- 45 | 1 | 1237 |  98
-num_stops_per_trip as (
-    select
-        t.route_id,
-        t.direction_id,
-        t.trip_id,
-        count(*) as num_stops
-    from trips t
-    inner join stop_times st on st.trip_id = t.trip_id
-    group by t.trip_id, t.direction_id
+-- 45 | 0 | 1234 | 1
+-- 45 | 0 | 1235 | 2
+-- 45 | 0 | 1236 | 2
+-- 45 | 0 | 1237 | 3
+distinct_stop_times as (
+    select distinct * from (
+        select
+            t.route_id,
+            t.direction_id,
+            st.stop_id,
+            st.stop_sequence
+        from stop_times st
+        inner join trips t on t.trip_id = st.trip_id
+    )
 ),
 
--- Return "best" trip for each route, which is the trip with the most stops.
--- Ex.
--- 45 | 0 | 1234
--- 45 | 1 | 1235
-best_trip_per_route as (
-    select
-        route_id,
-        direction_id,
-        trip_id
-    from num_stops_per_trip
-    group by route_id, direction_id
-    having max(num_stops)
-),
-
--- Return all stops from the "best" trip for each route ordered
+-- Return distinct stops from all route trips ordered
 -- by direction and stop sequence.
 -- Ex.
 -- 45 | 0 | 1 | <Point>
@@ -40,25 +29,35 @@ best_trip_per_route as (
 -- 45 | 1 | 2 | <Point>
 stops_per_trip as (
     select
-        t.route_id,
-        t.direction_id,
-        st.stop_sequence,
+        dst.route_id,
+        dst.direction_id,
+        dst.stop_sequence,
         MakePoint(s.stop_lon, s.stop_lat) point
-    from stop_times st
-    inner join stops s on s.stop_id = st.stop_id
-    inner join best_trip_per_route t on t.trip_id = st.trip_id
+    from distinct_stop_times dst
+    inner join stops s on s.stop_id = dst.stop_id
     order by
-        t.route_id,
-        t.direction_id,
-        st.stop_sequence
-)
+        dst.route_id,
+        dst.direction_id,
+        dst.stop_sequence
+),
 
 -- Return Polyline for each route.
 -- Ex.
 -- 45 | <Polyline>
+lines_per_trip as (
+    select
+        route_id,
+        MakeLine(point) line
+    from stops_per_trip
+    group by route_id
+)
+
+-- Return route trace as GeoJSON.
+-- Ex.
+-- 45 | <Polyline>
 select
     r.route_short_name,
-    AsGeoJSON(MakeLine(tmp.point)) line
-from stops_per_trip tmp
-inner join routes r on r.route_id = tmp.route_id
-group by r.route_short_name;
+    AsGeoJSON(n.line) line
+from lines_per_trip n
+inner join routes r on r.route_id = n.route_id
+order by r.route_short_name;
