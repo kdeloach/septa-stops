@@ -41,23 +41,31 @@ stops_per_trip as (
         dst.stop_sequence
 ),
 
--- Return Polyline for each route.
+-- Return Polyline for each route and direction.
 -- Ex.
--- 45 | <Polyline>
+-- 45 | 0 | <Polyline>
+-- 45 | 1 | <Polyline>
 lines_per_trip as (
     select
         route_id,
+        direction_id,
         MakeLine(point) line
     from stops_per_trip
-    group by route_id
+    group by route_id, direction_id
 )
 
--- Return route trace as GeoJSON.
+-- Return route trace as GeoJSON for both directions.
 -- Ex.
--- 45 | <Polyline>
+-- 45 | <Polyline> | <Polyline>
 select
     r.route_short_name,
-    AsGeoJSON(n.line) line
+    AsGeoJSON(n.line) line0,
+    AsGeoJSON(s.line) line1
 from lines_per_trip n
+-- Join against the opposite direction line
+inner join lines_per_trip s
+    on s.route_id = n.route_id
+    and s.direction_id != n.direction_id
 inner join routes r on r.route_id = n.route_id
+where n.direction_id = 0
 order by r.route_short_name;
