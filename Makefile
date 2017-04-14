@@ -6,7 +6,7 @@ DB_FILE:=stops.db
 DB_SOURCES:=routes.txt trips.txt stops.txt stop_times.txt
 OUTPUT_CSV:=output.csv
 
-all: $(OUTPUT_CSV)
+all: dist
 
 clean:
 	git clean -fd
@@ -20,7 +20,7 @@ console:
 docker-image: Dockerfile
 	docker build -t $(DOCKER_IMAGE_TAG) .
 
-$(OUTPUT_CSV): $(DB_FILE)
+$(OUTPUT_CSV): $(DB_FILE) query.sql
 	docker run --rm -i \
 		--entrypoint /usr/bin/spatialite \
 		-v $(PWD):$(DOCKER_WORKDIR) \
@@ -28,8 +28,8 @@ $(OUTPUT_CSV): $(DB_FILE)
 		-header -csv \
 		$(DB_FILE) < query.sql > $(OUTPUT_CSV)
 
-dist:
-	mkdir dist
+dist: $(OUTPUT_CSV)
+	mkdir -p dist
 	docker run --rm -ti \
 		--entrypoint ./create_geojson.py \
 		-v $(PWD):$(DOCKER_WORKDIR) \
