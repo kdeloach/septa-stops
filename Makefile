@@ -28,10 +28,24 @@ $(OUTPUT_CSV): $(DB_FILE) query.sql
 		-header -csv \
 		$(DB_FILE) < query.sql > $(OUTPUT_CSV)
 
+all.csv: $(DB_FILE) all.sql
+	docker run --rm -i \
+		--entrypoint /usr/bin/spatialite \
+		-v $(PWD):$(DOCKER_WORKDIR) \
+		$(DOCKER_IMAGE_TAG) \
+		-header -csv \
+		$(DB_FILE) < all.sql > all.csv
+
 dist: $(OUTPUT_CSV)
 	mkdir -p dist
+
 	docker run --rm -ti \
 		--entrypoint ./create_geojson.py \
+		-v $(PWD):$(DOCKER_WORKDIR) \
+		$(DOCKER_IMAGE_TAG)
+
+	docker run --rm -ti \
+		--entrypoint ./create_all.py \
 		-v $(PWD):$(DOCKER_WORKDIR) \
 		$(DOCKER_IMAGE_TAG)
 
