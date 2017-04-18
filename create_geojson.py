@@ -18,7 +18,7 @@ def write_file(route_num, line0, line1):
             'stroke-opacity': 1,
         })
         fcoll = FeatureCollection([f1, f2])
-        fp.write(geojson.dumps(fcoll))
+        geojson.dump(fcoll, fp, separators=(',', ':'))
 
 
 def main():
