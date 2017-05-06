@@ -4,12 +4,12 @@ DOCKER_IMAGE_TAG:=septa-stops
 DOCKER_WORKDIR:=/usr/src
 DB_FILE:=stops.db
 DB_SOURCES:=routes.txt trips.txt stops.txt stop_times.txt
-OUTPUT_CSV:=output.csv
+DIST_DIR=dist
 
-all: dist
+all: $(DIST_DIR)
 
 clean:
-	git clean -fd
+	git clean -fdx
 
 console:
 	docker run --rm -ti \
@@ -20,13 +20,13 @@ console:
 docker-image: Dockerfile
 	docker build -t $(DOCKER_IMAGE_TAG) .
 
-$(OUTPUT_CSV): $(DB_FILE) query.sql
+output.csv: $(DB_FILE) query.sql
 	docker run --rm -i \
 		--entrypoint /usr/bin/spatialite \
 		-v $(PWD):$(DOCKER_WORKDIR) \
 		$(DOCKER_IMAGE_TAG) \
 		-header -csv \
-		$(DB_FILE) < query.sql > $(OUTPUT_CSV)
+		$(DB_FILE) < query.sql > output.csv
 
 all.csv: $(DB_FILE) all.sql
 	docker run --rm -i \
@@ -36,8 +36,8 @@ all.csv: $(DB_FILE) all.sql
 		-header -csv \
 		$(DB_FILE) < all.sql > all.csv
 
-dist: $(OUTPUT_CSV)
-	mkdir -p dist
+$(DIST_DIR): all.csv output.csv
+	mkdir -p $(DIST_DIR)
 
 	docker run --rm -ti \
 		--entrypoint ./create_geojson.py \
