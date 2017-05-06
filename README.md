@@ -5,36 +5,34 @@ available as GeoJSON in the [`dist`](https://github.com/kdeloach/septa-stops/tre
 Each GeoJSON extract contains a FeatureCollection with two LineStrings,
 one for each route direction.
 
-## Description
+## Overview
 
 The goal of this project is to produce a GeoJSON route trace for each SEPTA
 bus route. By combining bus stops and route traces into a single file, we
 are able to conserve bandwidth, which is important for mobile applications.
-Due to the nature of bus schedules, which may change during different times
-of the day, creating a static route trace can be a challenge.
+Because bus schedules may change during different times of the day,
+creating a static route trace can challenging.
 
-### SEPTA API KML
+### KML
 
-Accurate route traces are available from the [SEPTA API](http://www3.septa.org/hackathon).
-These route traces are KML files, which can be converted
-to GeoJSON by using [GDAL](http://www.gdal.org/). These should be used when
-accuracy is important and bandwidth is not a concern. However, considering
-that route traces may be derived from bus stops, but not the other
-way around, it makes sense to prefer to use bus stops only, instead of
-downloading two overlapping data sets.
+KML route traces are available from the [SEPTA API](http://www3.septa.org/hackathon).
+These can be converted to GeoJSON by using [GDAL](http://www.gdal.org/).
+Although accurate, the filesizes are somewhat large. There is also a
+considerable amount of overlap between route traces and bus stops
+(list of points). Most applications will probably want to show
+both. If we can generate route traces from a much smaller dataset (bus
+stops), then we can reduce bandwidth usage by half.
 
-### SEPTA API JSON
+### JSON
 
-Ideally, we would be able to download bus stops for each route from the
-SEPTA API directly. Although a JSON endpoint for bus stops exists, the data is
-unsorted. The route trace generated from this data looks completely random:
-
-![](https://github.com/kdeloach/septa-stops/raw/readme/images/unsorted.png)
+Bus stops are available from the SEPTA API as JSON. Unfortunately, these
+are unsorted (by design), so there's no way to generate route traces from
+this data.
 
 ### GTFS
 
-The GTFS data extracts from the SEPTA API contain the most complete
-information available. Using this data, we can generate accurate route traces.
+GTFS data from the SEPTA API contains the most complete
+information available, and can be used to generate accurate route traces.
 However, bus schedules may change during the day, so we need to figure
 out a strategy to generate the most reasonable static representation.
 
@@ -43,26 +41,26 @@ reference image:
 
 ### Baseline
 
-This snapshot is from SEPTA TransitView for Bus 104, which
-I will use as a baseline reference.
+This snapshot is from [SEPTA TransitView](http://www.septa.org/realtime/status/system-status.shtml)
+for Bus 104, which I will use as a baseline reference to compare each strategy.
 
 ![](https://github.com/kdeloach/septa-stops/raw/readme/images/kml-reference.png)
 
 ### Use the "longest trip"
 
 First, I tried to use the longest trip. I assumed that the trip with the
-most bus stops would contain *all* bus stops, but that's not true. The
-longest trip for Bus 104 does not include stops that are
-visited during peak hours.
+most bus stops would contain *all* bus stops, but that turned out not to be
+the case. The longest trip for Bus 104 doesn't include some peak hour only
+stops(?).
 
 ![](https://github.com/kdeloach/septa-stops/raw/readme/images/longest-trip.png)
 
 ### Union all trips together
 
-This strategy creates a route trace by generating a line for each possible
+Next, I tried to create a route trace by generating a line for each possible
 trip, then combining the result into a single line per bus route.
-The paths generated are more "complete" compared to the
-previous solution, but the results may be difficult to interpret.
+The result is more "complete" compared to the previous solution, but I
+find the results difficult to interpret.
 
 ![](https://github.com/kdeloach/septa-stops/raw/readme/images/union-trips.png)
 
@@ -73,13 +71,14 @@ from all route trips. I was worried that combining stops from other trips
 would be confusing, but the results are reasonable. The final route trace
 is a single contiguous line which is easy to understand. In my opinion,
 this is the best strategy out of all three in terms of simplicity and
-filesize.
+filesize, and this is the strategy I used to generate route traces on
+the `master` branch.
 
 ![](https://github.com/kdeloach/septa-stops/raw/readme/images/distinct-stops.png)
 
 ## Getting Started
 
-Install `docker` then run `make`.
+Run `make`.
 
 ## License
 
