@@ -1,17 +1,18 @@
 # septa-stops
 
 Generate SEPTA route traces based on GTFS data. Route traces are
-available as GeoJSON in the [`dist`](https://github.com/kdeloach/septa-stops/tree/master/dist) folder.
+available as GeoJSON in the [dist](https://github.com/kdeloach/septa-stops/tree/master/dist) folder.
 Each GeoJSON extract contains a FeatureCollection with two LineStrings,
 one for each route direction.
 
 ## Overview
 
-The goal of this project is to produce a GeoJSON route trace for each SEPTA
-bus route. By combining bus stops and route traces into a single file, we
-are able to conserve bandwidth, which is important for mobile applications.
-Because bus schedules may change during different times of the day,
-creating a static route trace can challenging.
+The goal of this project is to produce GeoJSON route traces for SEPTA
+bus routes by combining bus stops and route traces into a single file,
+to conserve bandwidth. Because bus schedules change during the day,
+creating a static route trace is a challenge. This document describes
+different strategies I experimented with to find the best balance between
+correctness and simplicity.
 
 ### KML
 
@@ -36,9 +37,6 @@ information available, and can be used to generate accurate route traces.
 However, bus schedules may change during the day, so we need to figure
 out a strategy to generate the most reasonable static representation.
 
-Here are the three different strategies that I tried along with a baseline
-reference image:
-
 ### Baseline
 
 This snapshot is from [SEPTA TransitView](http://www.septa.org/realtime/status/system-status.shtml)
@@ -58,8 +56,8 @@ stops(?).
 ### Union all trips together
 
 Next, I tried to create a route trace by generating a line for each possible
-trip, then combining the result into a single line per bus route.
-The result is more "complete" compared to the previous solution, but I
+trip, then combine the result into a single line per bus route.
+The result is more complete compared to the previous solution, but I
 find the results difficult to interpret.
 
 ![](https://github.com/kdeloach/septa-stops/raw/readme/images/union-trips.png)
@@ -69,16 +67,20 @@ find the results difficult to interpret.
 Finally, I created a route trace by selecting distinct bus stops
 from all route trips. I was worried that combining stops from other trips
 would be confusing, but the results are reasonable. The final route trace
-is a single contiguous line which is easy to understand. In my opinion,
-this is the best strategy out of all three in terms of simplicity and
-filesize, and this is the strategy I used to generate route traces on
+is a single contiguous line which is easy to understand. 
+
+In my opinion, this is the best strategy out of all three in terms of simplicity and
+file size. This is the strategy I used to generate route traces on
 the `master` branch.
 
 ![](https://github.com/kdeloach/septa-stops/raw/readme/images/distinct-stops.png)
 
 ## Getting Started
 
-Run `make`.
+Run:
+```sh
+make
+```
 
 ## License
 
